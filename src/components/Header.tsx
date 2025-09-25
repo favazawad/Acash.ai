@@ -4,14 +4,14 @@ import { Button } from '@/components/ui/button';
 
 export function Header() {
   const navLinks = [
-    { href: '#', label: 'Home' },
+    { href: '/', label: 'Home' },
     { href: '#features', label: 'Features' },
     { href: '#about', label: 'About' },
     { href: '#contact', label: 'Contact' },
   ];
 
   return (
-    <header className="container mx-auto px-4 py-4">
+    <header className="container sticky top-0 z-50 mx-auto bg-background/95 px-4 py-4 backdrop-blur-sm">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-3">
