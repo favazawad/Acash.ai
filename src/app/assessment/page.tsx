@@ -1,3 +1,8 @@
+
+
+function assertDefined<T>(v: T): asserts v is NonNullable<T> {
+  if (v === undefined || v === null) throw new Error('Missing required data');
+}
 'use client'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
@@ -352,40 +357,40 @@ export default function AssessmentPage() {
         <Card className="shadow-xl">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              {currentStepData.icon}
+              {currentStepData!.icon}
             </div>
             <CardTitle className="text-xl font-bold text-gray-800">
-              {currentStepData.title}
+              {currentStepData!.title}
             </CardTitle>
             <CardDescription className="text-gray-600">
-              {currentStepData.subtitle}
+              {currentStepData!.subtitle}
             </CardDescription>
           </CardHeader>
           
           <CardContent className="p-8">
             {currentStep < 4 ? (
               <div className="space-y-4">
-                <Label htmlFor={currentStepData.field} className="text-base font-medium">
-                  {currentStepData.label}
+                <Label htmlFor={currentStepData!.field} className="text-base font-medium">
+                  {currentStepData!.label}
                 </Label>
                 <Input
-                  id={currentStepData.field}
+                  id={currentStepData!.field}
                   type="number"
-                  placeholder={currentStepData.placeholder}
-                  value={assessmentData[currentStepData.field as keyof AssessmentData] || ''}
+                  placeholder={currentStepData!.placeholder}
+                  value={assessmentData[currentStepData!.field as keyof AssessmentData] || ''}
                   onChange={(e) => handleInputChange(
-                    currentStepData.field as keyof AssessmentData, 
+                    currentStepData!.field as keyof AssessmentData, 
                     parseFloat(e.target.value) || 0
                   )}
-                  className={`text-lg p-4 h-14 ${errors[currentStepData.field] ? 'border-red-500' : ''}`}
+                  className={`text-lg p-4 h-14 ${errors[currentStepData!.field] ? 'border-red-500' : ''}`}
                 />
-                {errors[currentStepData.field] && (
-                  <p className="text-red-500 text-sm mt-1">{errors[currentStepData.field]}</p>
+                {errors[currentStepData!.field] && (
+                  <p className="text-red-500 text-sm mt-1">{errors[currentStepData!.field]}</p>
                 )}
               </div>
             ) : (
               <div className="space-y-3">
-                <Label className="text-base font-medium">{currentStepData.label}</Label>
+                <Label className="text-base font-medium">{currentStepData!.label}</Label>
                 <div className="grid gap-3">
                   {goalOptions.map((option) => (
                     <button

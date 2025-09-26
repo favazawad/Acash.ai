@@ -42,4 +42,8 @@ next-env.d.ts
 
 # firebase
 firebase-debug.log
-firestore-debug.log
+firestore-debug.log# acash additions
+.firebase/
+firebase-debug.log
+.env
+.env.*.local

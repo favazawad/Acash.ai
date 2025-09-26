@@ -1,3 +1,8 @@
+
+
+type Limit = { name: string } & ({ min: number } | { max: number } | { min: number; max: number });
+const getMin = (l: Limit): number => (typeof (l as any).min === 'number' ? (l as any).min : 0);
+const getMax = (l: Limit): number => (typeof (l as any).max === 'number' ? (l as any).max : Number.POSITIVE_INFINITY);
 'use client'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
@@ -173,7 +178,7 @@ export default function SmartBudgetPlanner() {
       let recommendation = ''
 
       if (key === 'savings') {
-        if (percentage >= recommended.min!) {
+        if (percentage >= getMin(recommended)!) {
           status = 'good'
           recommendation = `ممتاز! معدل الادخار صحي`
         } else if (percentage >= 10) {
@@ -181,18 +186,18 @@ export default function SmartBudgetPlanner() {
           recommendation = `جيد، لكن يمكن زيادة الادخار`
         } else {
           status = 'danger'
-          recommendation = `معدل ادخار منخفض، حاول الوصول لـ ${recommended.min}%`
+          recommendation = `معدل ادخار منخفض، حاول الوصول لـ ${getMin(recommended)}%`
         }
       } else {
-        if (percentage <= recommended.max!) {
+        if (percentage <= getMax(recommended)!) {
           status = 'good'
           recommendation = `ضمن المعدل المطلوب`
-        } else if (percentage <= recommended.max! * 1.2) {
+        } else if (percentage <= getMax(recommended)! * 1.2) {
           status = 'warning'
           recommendation = `أعلى قليلاً من المُوصى، حاول التقليل`
         } else {
           status = 'danger'
-          recommendation = `مرتفع جداً، المعدل المُوصى أقل من ${recommended.max}%`
+          recommendation = `مرتفع جداً، المعدل المُوصى أقل من ${getMax(recommended)}%`
         }
       }
 
