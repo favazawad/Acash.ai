@@ -1,8 +1,8 @@
 
 
 type Limit = { name: string } & ({ min: number } | { max: number } | { min: number; max: number });
-const getMin = (l: Limit) => ('min' in l ? getMin(l) : 0);
-const getMax = (l: Limit) => ('max' in l ? getMax(l) : Number.POSITIVE_INFINITY);
+const getMin = (l: Limit): number => (typeof (l as any).min === 'number' ? (l as any).min : 0);
+const getMax = (l: Limit): number => (typeof (l as any).max === 'number' ? (l as any).max : Number.POSITIVE_INFINITY);
 'use client'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
@@ -501,7 +501,7 @@ export default function SmartBudgetPlanner() {
                           </div>
                         </div>
                         <Progress 
-                          value={getMin(Math)(category.percentage, 100)} 
+                          value={Math.min(category.percentage, 100)} 
                           className={`h-2 ${
                             category.status === 'good' ? 'bg-green-100' :
                             category.status === 'warning' ? 'bg-yellow-100' :

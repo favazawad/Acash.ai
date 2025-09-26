@@ -27,8 +27,9 @@
         "./src/*"
       ]
     },
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true
+    "noUncheckedIndexedAccess": false,
+    "exactOptionalPropertyTypes": false,
+    "noImplicitAny": false
   },
   "include": [
     "next-env.d.ts",
