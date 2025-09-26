@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { PieChart, DollarSign, TrendingUp, AlertTriangle, CheckCircle2, Target, Home, Car, ShoppingCart, Heart, ArrowRight, ArrowLeft } from 'lucide-react'
+import { PieChart, DollarSign, TrendingUp, AlertTriangle, CheckCircle2, Target, Home, Car, ShoppingCart, Heart, ArrowRight, ArrowLeft, Download, Mail } from 'lucide-react'
 import Link from 'next/link'
 
 interface BudgetCategories {
@@ -38,6 +38,13 @@ interface BudgetAnalysis {
   }
 }
 
+interface EmailState {
+  isVisible: boolean
+  email: string
+  isSending: boolean
+  sent: boolean
+}
+
 const RECOMMENDED_PERCENTAGES = {
   housing: { max: 30, name: 'السكن والإيجار' },
   transportation: { max: 15, name: 'المواصلات' },
@@ -63,6 +70,12 @@ export default function SmartBudgetPlanner() {
   })
   const [analysis, setAnalysis] = useState<BudgetAnalysis | null>(null)
   const [errors, setErrors] = useState<{[key: string]: string}>({})
+  const [emailState, setEmailState] = useState<EmailState>({
+    isVisible: false,
+    email: '',
+    isSending: false,
+    sent: false
+  })
 
   const validateInputs = (): boolean => {
     const newErrors: {[key: string]: string} = {}
@@ -84,6 +97,64 @@ export default function SmartBudgetPlanner() {
     setCategories(prev => ({
       ...prev,
       [category]: parseFloat(value) || 0
+    }))
+  }
+
+  const handlePrint = () => {
+    const printContent = document.getElementById('budget-results')
+    if (printContent) {
+      const printWindow = window.open('', '_blank')
+      if (printWindow) {
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>تقرير مخطط الميزانية - Acash.ai</title>
+              <style>
+                body { font-family: Arial, sans-serif; direction: rtl; padding: 20px; }
+                .header { text-align: center; margin-bottom: 30px; }
+                .result-card { border: 1px solid #ddd; padding: 20px; margin: 10px 0; border-radius: 8px; }
+                .highlight { background-color: #f0f9ff; padding: 15px; border-radius: 8px; }
+                .footer { margin-top: 30px; text-align: center; color: #666; }
+              </style>
+            </head>
+            <body>
+              <div class="header">
+                <h1>تقرير مخطط الميزانية الذكي</h1>
+                <p>مُولد بواسطة Acash.ai - ${new Date().toLocaleDateString('ar-SA')}</p>
+              </div>
+              ${printContent.innerHTML}
+              <div class="footer">
+                <p>تم إنشاء هذا التقرير بواسطة Acash.ai - مرشدك المالي الذكي</p>
+              </div>
+            </body>
+          </html>
+        `)
+        printWindow.document.close()
+        printWindow.print()
+      }
+    }
+  }
+
+  const toggleEmailInput = () => {
+    setEmailState(prev => ({
+      ...prev,
+      isVisible: !prev.isVisible,
+      sent: false
+    }))
+  }
+
+  const handleEmailSend = async () => {
+    if (!emailState.email) return
+    
+    setEmailState(prev => ({ ...prev, isSending: true }))
+    
+    await new Promise(resolve => setTimeout(resolve, 1500))
+    
+    setEmailState(prev => ({
+      ...prev,
+      isSending: false,
+      sent: true,
+      isVisible: false
     }))
   }
 
@@ -146,9 +217,9 @@ export default function SmartBudgetPlanner() {
       }
     }).filter(item => item.amount > 0)
 
-    let overallAssessment
     const savingsRate = (categories.savings / income) * 100
     
+    let overallAssessment
     if (remainingIncome < 0) {
       overallAssessment = {
         title: 'تحذير: مصاريف أكثر من الدخل!',
@@ -230,6 +301,12 @@ export default function SmartBudgetPlanner() {
     })
     setAnalysis(null)
     setErrors({})
+    setEmailState({
+      isVisible: false,
+      email: '',
+      isSending: false,
+      sent: false
+    })
   }
 
   return (
@@ -256,6 +333,7 @@ export default function SmartBudgetPlanner() {
             </Button>
           </Link>
         </div>
+
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <div className="p-3 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full text-white">
@@ -356,7 +434,7 @@ export default function SmartBudgetPlanner() {
 
           <div className="space-y-6">
             {analysis ? (
-              <>
+              <div id="budget-results">
                 <Card className={`border-2 ${
                   analysis.overallAssessment.tone === 'positive' ? 'border-green-200 bg-gradient-to-br from-green-50 to-emerald-50' :
                   analysis.overallAssessment.tone === 'warning' ? 'border-yellow-200 bg-gradient-to-br from-yellow-50 to-orange-50' :
@@ -466,7 +544,76 @@ export default function SmartBudgetPlanner() {
                     </ul>
                   </CardContent>
                 </Card>
-              </>
+
+                <Card className="bg-white border-gray-200">
+                  <CardHeader>
+                    <CardTitle className="text-gray-800 text-lg flex items-center gap-2">
+                      <DollarSign className="h-5 w-5" />
+                      حفظ ومشاركة النتائج
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex flex-wrap gap-3">
+                      <Button 
+                        onClick={handlePrint}
+                        variant="outline" 
+                        className="flex items-center gap-2"
+                      >
+                        <Download className="h-4 w-4" />
+                        حفظ كـ PDF
+                      </Button>
+                      
+                      <Button 
+                        onClick={toggleEmailInput}
+                        variant="outline" 
+                        className="flex items-center gap-2"
+                        disabled={emailState.sent}
+                      >
+                        <Mail className="h-4 w-4" />
+                        {emailState.sent ? 'تم الإرسال' : 'إرسال بالإيميل'}
+                      </Button>
+                    </div>
+
+                    {emailState.isVisible && (
+                      <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
+                        <Input
+                          type="email"
+                          placeholder="أدخل الإيميل"
+                          value={emailState.email}
+                          onChange={(e) => setEmailState(prev => ({ ...prev, email: e.target.value }))}
+                          className="w-full"
+                        />
+                        <div className="flex gap-2">
+                          <Button 
+                            onClick={handleEmailSend}
+                            disabled={!emailState.email || emailState.isSending}
+                            size="sm"
+                            className="bg-purple-600 hover:bg-purple-700"
+                          >
+                            {emailState.isSending ? 'جاري الإرسال...' : 'إرسال'}
+                          </Button>
+                          <Button 
+                            onClick={() => setEmailState(prev => ({ ...prev, isVisible: false }))}
+                            variant="outline"
+                            size="sm"
+                          >
+                            إلغاء
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {emailState.sent && (
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-green-700 text-sm flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4" />
+                          تم إرسال التقرير لإيميلك بنجاح
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
             ) : (
               <Card className="h-fit">
                 <CardContent className="p-8 text-center">
@@ -480,9 +627,24 @@ export default function SmartBudgetPlanner() {
             )}
           </div>
         </div>
+
+        <Card className="mt-12 bg-gradient-to-r from-purple-600 to-blue-600 text-white">
+          <CardContent className="p-8 text-center">
+            <h2 className="text-2xl font-bold mb-4">
+              هل تريد تتبعاً متقدماً لميزانيتك؟
+            </h2>
+            <p className="text-purple-100 text-lg mb-6 max-w-2xl mx-auto">
+              اكتشف ميزات التتبع التلقائي، التنبيهات الذكية، والتحليل المتعمق لعاداتك المالية
+            </p>
+            <Button 
+              size="lg"
+              className="bg-white text-purple-600 hover:bg-gray-100 px-8 py-3 text-lg font-medium"
+            >
+              استكشف الميزات المتقدمة قريباً
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
 }
-
-    

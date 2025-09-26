@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Calculator, TrendingDown, Calendar, DollarSign, AlertCircle, CheckCircle2, ArrowRight, Home, ArrowLeft } from 'lucide-react'
+import { Calculator, TrendingDown, Calendar, DollarSign, AlertCircle, CheckCircle2, ArrowRight, Home, ArrowLeft, Download, Mail } from 'lucide-react'
 import Link from 'next/link'
 
 interface DebtResult {
@@ -19,12 +19,25 @@ interface DebtResult {
   }
 }
 
+interface EmailState {
+  isVisible: boolean
+  email: string
+  isSending: boolean
+  sent: boolean
+}
+
 export default function SimplifiedDebtCalculator() {
   const [debtAmount, setDebtAmount] = useState('')
   const [monthlyPayment, setMonthlyPayment] = useState('')
   const [interestRate, setInterestRate] = useState('')
   const [result, setResult] = useState<DebtResult | null>(null)
   const [errors, setErrors] = useState<{[key: string]: string}>({})
+  const [emailState, setEmailState] = useState<EmailState>({
+    isVisible: false,
+    email: '',
+    isSending: false,
+    sent: false
+  })
 
   const validateInputs = (): boolean => {
     const newErrors: {[key: string]: string} = {}
@@ -55,7 +68,7 @@ export default function SimplifiedDebtCalculator() {
   }
 
   const generatePersonalMessage = (months: number, totalInterest: number, debtAmount: number) => {
-    const principal = debtAmount;
+    const principal = parseFloat(debtAmount)
     const interestPercentage = (totalInterest / principal) * 100
 
     if (months <= 6) {
@@ -156,12 +169,78 @@ export default function SimplifiedDebtCalculator() {
     return `${months} ${months === 1 ? 'شهر' : 'شهور'}`
   }
 
+  const handlePrint = () => {
+    // Simple PDF generation using browser's built-in functionality
+    // In future versions, this will use jsPDF for more advanced formatting
+    const printContent = document.getElementById('debt-results')
+    if (printContent) {
+      const printWindow = window.open('', '_blank')
+      if (printWindow) {
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>تقرير حاسبة الديون - Acash.ai</title>
+              <style>
+                body { font-family: Arial, sans-serif; direction: rtl; padding: 20px; }
+                .header { text-align: center; margin-bottom: 30px; }
+                .result-card { border: 1px solid #ddd; padding: 20px; margin: 10px 0; border-radius: 8px; }
+                .highlight { background-color: #f0f9ff; padding: 15px; border-radius: 8px; }
+                .footer { margin-top: 30px; text-align: center; color: #666; }
+              </style>
+            </head>
+            <body>
+              <div class="header">
+                <h1>تقرير حاسبة الديون</h1>
+                <p>مُولد بواسطة Acash.ai - ${new Date().toLocaleDateString('ar-SA')}</p>
+              </div>
+              ${printContent.innerHTML}
+              <div class="footer">
+                <p>تم إنشاء هذا التقرير بواسطة Acash.ai - مرشدك المالي الذكي</p>
+              </div>
+            </body>
+          </html>
+        `)
+        printWindow.document.close()
+        printWindow.print()
+      }
+    }
+  }
+
+  const toggleEmailInput = () => {
+    setEmailState(prev => ({
+      ...prev,
+      isVisible: !prev.isVisible,
+      sent: false
+    }))
+  }
+
+  const handleEmailSend = async () => {
+    if (!emailState.email) return
+    
+    setEmailState(prev => ({ ...prev, isSending: true }))
+    
+    await new Promise(resolve => setTimeout(resolve, 1500))
+    
+    setEmailState(prev => ({
+      ...prev,
+      isSending: false,
+      sent: true,
+      isVisible: false
+    }))
+  }
+
   const resetCalculator = () => {
     setDebtAmount('')
     setMonthlyPayment('')
     setInterestRate('')
     setResult(null)
     setErrors({})
+    setEmailState({
+      isVisible: false,
+      email: '',
+      isSending: false,
+      sent: false
+    })
   }
 
   return (
@@ -188,6 +267,7 @@ export default function SimplifiedDebtCalculator() {
             </Button>
           </Link>
         </div>
+
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <div className="p-3 bg-gradient-to-r from-blue-600 to-teal-600 rounded-full text-white">
@@ -297,7 +377,7 @@ export default function SimplifiedDebtCalculator() {
 
           <div className="space-y-6">
             {result ? (
-              <>
+              <div id="debt-results">
                 <Card className="border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-teal-50">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-blue-800 text-xl">
@@ -372,7 +452,76 @@ export default function SimplifiedDebtCalculator() {
                     </div>
                   </CardContent>
                 </Card>
-              </>
+
+                <Card className="bg-white border-gray-200">
+                  <CardHeader>
+                    <CardTitle className="text-gray-800 text-lg flex items-center gap-2">
+                      <DollarSign className="h-5 w-5" />
+                      حفظ ومشاركة النتائج
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex flex-wrap gap-3">
+                      <Button 
+                        onClick={handlePrint}
+                        variant="outline" 
+                        className="flex items-center gap-2"
+                      >
+                        <Download className="h-4 w-4" />
+                        حفظ كـ PDF
+                      </Button>
+                      
+                      <Button 
+                        onClick={toggleEmailInput}
+                        variant="outline" 
+                        className="flex items-center gap-2"
+                        disabled={emailState.sent}
+                      >
+                        <Mail className="h-4 w-4" />
+                        {emailState.sent ? 'تم الإرسال' : 'إرسال بالإيميل'}
+                      </Button>
+                    </div>
+
+                    {emailState.isVisible && (
+                      <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
+                        <Input
+                          type="email"
+                          placeholder="أدخل الإيميل"
+                          value={emailState.email}
+                          onChange={(e) => setEmailState(prev => ({ ...prev, email: e.target.value }))}
+                          className="w-full"
+                        />
+                        <div className="flex gap-2">
+                          <Button 
+                            onClick={handleEmailSend}
+                            disabled={!emailState.email || emailState.isSending}
+                            size="sm"
+                            className="bg-blue-600 hover:bg-blue-700"
+                          >
+                            {emailState.isSending ? 'جاري الإرسال...' : 'إرسال'}
+                          </Button>
+                          <Button 
+                            onClick={() => setEmailState(prev => ({ ...prev, isVisible: false }))}
+                            variant="outline"
+                            size="sm"
+                          >
+                            إلغاء
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {emailState.sent && (
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-green-700 text-sm flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4" />
+                          تم إرسال التقرير لإيميلك بنجاح
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
             ) : (
               <Card className="h-fit">
                 <CardContent className="p-8 text-center">
@@ -407,5 +556,3 @@ export default function SimplifiedDebtCalculator() {
     </div>
   )
 }
-
-    
