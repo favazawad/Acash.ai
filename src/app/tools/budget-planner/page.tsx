@@ -1,3 +1,8 @@
+
+
+type Limit = { name: string } & ({ min: number } | { max: number } | { min: number; max: number });
+const getMin = (l: Limit) => ('min' in l ? getMin(l) : 0);
+const getMax = (l: Limit) => ('max' in l ? getMax(l) : Number.POSITIVE_INFINITY);
 'use client'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
