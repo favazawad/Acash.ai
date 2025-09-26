@@ -5,8 +5,8 @@ import { cn } from '@/lib/utils';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Acash.ai - AI-Powered Personal Financial Guide',
-  description: 'Your AI-powered guide to financial freedom.',
+  title: 'Acash.ai - مرشدك المالي الشخصي المدعوم بالذكاء الاصطناعي',
+  description: 'مرشدك المالي الشخصي المدعوم بالذكاء الاصطناعي لتحقيق الحرية المالية.',
 };
 
 export default function RootLayout({
@@ -15,7 +15,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="ar" dir="rtl" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -24,7 +24,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className={cn('font-body antialiased')}>
+      <body className={cn('font-sans antialiased')}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
