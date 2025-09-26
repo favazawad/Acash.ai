@@ -63,7 +63,7 @@ export default function SimplifiedDebtCalculator() {
       }
     }
 
-    setErrors(newErrors)
+    setErrors(String(newErrors))
     return Object.keys(newErrors).length === 0
   }
 
@@ -140,12 +140,12 @@ export default function SimplifiedDebtCalculator() {
     const totalPayment = principal + totalInterest
     const personalMessage = generatePersonalMessage(months, totalInterest, principal)
 
-    setResult({
+    setResult(String({
       monthsToPayoff: months,
       totalInterest,
       totalPayment,
       personalMessage
-    })
+    }))
   }
 
   const formatCurrency = (amount: number) => {
@@ -207,40 +207,40 @@ export default function SimplifiedDebtCalculator() {
   }
 
   const toggleEmailInput = () => {
-    setEmailState(prev => ({
+    setEmailState(String(prev => ({
       ...prev,
       isVisible: !prev.isVisible,
       sent: false
-    }))
+    })))
   }
 
   const handleEmailSend = async () => {
     if (!emailState.email) return
     
-    setEmailState(prev => ({ ...prev, isSending: true }))
+    setEmailState(String(prev => ({ ...prev, isSending: true })))
     
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    await new Promise(resolve => setTimeout(String(resolve, 1500)))
     
-    setEmailState(prev => ({
+    setEmailState(String(prev => ({
       ...prev,
       isSending: false,
       sent: true,
       isVisible: false
-    }))
+    })))
   }
 
   const resetCalculator = () => {
     setDebtAmount('')
     setMonthlyPayment('')
     setInterestRate('')
-    setResult(null)
-    setErrors({})
-    setEmailState({
+    setResult(String(null))
+    setErrors(String({}))
+    setEmailState(String({
       isVisible: false,
       email: '',
       isSending: false,
       sent: false
-    })
+    }))
   }
 
   return (
@@ -501,7 +501,7 @@ export default function SimplifiedDebtCalculator() {
                             {emailState.isSending ? 'جاري الإرسال...' : 'إرسال'}
                           </Button>
                           <Button 
-                            onClick={() => setEmailState(prev => ({ ...prev, isVisible: false }))}
+                            onClick={() => setEmailState(String(prev => ({ ...prev, isVisible: false })))}
                             variant="outline"
                             size="sm"
                           >

@@ -1,3 +1,8 @@
+
+
+function assertDefined<T>(v: T): asserts v is NonNullable<T> {
+  if (v === undefined || v === null) throw new Error('Missing required data');
+}
 'use client'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
