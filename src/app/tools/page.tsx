@@ -38,7 +38,7 @@ export default function ToolsPage() {
       icon: <PieChart className="h-8 w-8" />,
       href: '/tools/budget-planner',
       features: ['تخطيط الميزانية', 'تتبع الإنفاق', 'تحليل الأنماط'],
-      status: 'coming-soon',
+      status: 'available',
       category: 'التخطيط المالي',
       color: 'from-blue-500 to-cyan-600',
       bgColor: 'bg-blue-50',
@@ -153,9 +153,9 @@ export default function ToolsPage() {
               </p>
             </div>
             
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch">
               {availableTools.map((tool) => (
-                <Card key={tool.id} className="group hover:shadow-xl transition-all duration-300 border-0 shadow-lg overflow-hidden">
+                <Card key={tool.id} className="group hover:shadow-xl transition-all duration-300 border-0 shadow-lg overflow-hidden flex flex-col">
                   <CardHeader className={`${tool.bgColor} relative`}>
                     <div className={`inline-flex p-3 rounded-full bg-gradient-to-r ${tool.color} text-white mb-4 w-fit`}>
                       {tool.icon}
@@ -167,20 +167,20 @@ export default function ToolsPage() {
                       {tool.title}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="p-6">
-                    <CardDescription className="text-gray-600 mb-4 line-clamp-3 text-base leading-relaxed">
-                      {tool.description}
-                    </CardDescription>
-                    
-                    <div className="space-y-4">
-                      <div className="flex flex-wrap gap-2">
+                  <CardContent className="p-6 flex flex-col flex-1">
+                    <div>
+                        <CardDescription className="text-gray-600 mb-4 line-clamp-3 text-base leading-relaxed min-h-[72px]">
+                        {tool.description}
+                        </CardDescription>
+                        <div className="flex flex-wrap gap-2 min-h-[32px]">
                         {tool.features.map((feature, index) => (
-                          <Badge key={index} variant="outline" className="text-xs">
+                            <Badge key={index} variant="outline" className="text-xs">
                             {feature}
-                          </Badge>
+                            </Badge>
                         ))}
-                      </div>
-                      
+                        </div>
+                    </div>
+                    <div className="mt-auto pt-4">
                       <Button 
                         asChild 
                         className="w-full bg-gradient-to-r from-blue-600 to-teal-600 hover:from-blue-700 hover:to-teal-700 group"

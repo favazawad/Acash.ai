@@ -4,161 +4,135 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
-import { Calculator, TrendingDown, Calendar, DollarSign, Target, Plus, Trash2, BarChart3 } from 'lucide-react'
+import { Calculator, TrendingDown, Calendar, DollarSign, AlertCircle, CheckCircle2, ArrowRight, Home, ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
 
-interface Debt {
-  id: string
-  name: string
-  balance: number
-  minPayment: number
-  interestRate: number
-}
-
-interface PayoffResult {
-  debt: Debt
+interface DebtResult {
   monthsToPayoff: number
   totalInterest: number
   totalPayment: number
+  personalMessage?: {
+    title: string
+    message: string
+    tone: string
+    advice: string
+  }
 }
 
-interface PayoffStrategy {
-  method: 'snowball' | 'avalanche'
-  results: PayoffResult[]
-  totalTime: number
-  totalInterest: number
-  savings: number
-}
+export default function SimplifiedDebtCalculator() {
+  const [debtAmount, setDebtAmount] = useState('')
+  const [monthlyPayment, setMonthlyPayment] = useState('')
+  const [interestRate, setInterestRate] = useState('')
+  const [result, setResult] = useState<DebtResult | null>(null)
+  const [errors, setErrors] = useState<{[key: string]: string}>({})
 
-export default function DebtCalculatorPage() {
-  const [debts, setDebts] = useState<Debt[]>([
-    { id: '1', name: 'بطاقة ائتمان', balance: 15000, minPayment: 450, interestRate: 18 }
-  ])
-  const [extraPayment, setExtraPayment] = useState(0)
-  const [results, setResults] = useState<{
-    snowball: PayoffStrategy | null
-    avalanche: PayoffStrategy | null
-  }>({ snowball: null, avalanche: null })
+  const validateInputs = (): boolean => {
+    const newErrors: {[key: string]: string} = {}
 
-  const addDebt = () => {
-    const newDebt: Debt = {
-      id: Date.now().toString(),
-      name: '',
-      balance: 0,
-      minPayment: 0,
-      interestRate: 0
+    if (!debtAmount || parseFloat(debtAmount) <= 0) {
+      newErrors.debtAmount = 'يرجى إدخال مبلغ الدين'
     }
-    setDebts([...debts, newDebt])
-  }
 
-  const updateDebt = (id: string, field: keyof Debt, value: string | number) => {
-    setDebts(debts.map(debt => 
-      debt.id === id ? { ...debt, [field]: value } : debt
-    ))
-  }
-
-  const removeDebt = (id: string) => {
-    if (debts.length > 1) {
-      setDebts(debts.filter(debt => debt.id !== id))
+    if (!monthlyPayment || parseFloat(monthlyPayment) <= 0) {
+      newErrors.monthlyPayment = 'يرجى إدخال القسط الشهري'
     }
-  }
 
-  const calculatePayoffTime = (balance: number, payment: number, rate: number): PayoffResult => {
-    const monthlyRate = rate / 100 / 12
-    let currentBalance = balance
-    let months = 0
-    let totalInterest = 0
+    if (!interestRate || parseFloat(interestRate) < 0) {
+      newErrors.interestRate = 'يرجى إدخال معدل الفائدة'
+    }
 
-    if (payment <= currentBalance * monthlyRate) {
-      return {
-        debt: { id: '', name: '', balance, minPayment: payment, interestRate: rate },
-        monthsToPayoff: 999,
-        totalInterest: 999999,
-        totalPayment: 999999
+    if (parseFloat(monthlyPayment) && parseFloat(debtAmount) && parseFloat(interestRate)) {
+      const monthlyRate = parseFloat(interestRate) / 100 / 12
+      const minPayment = parseFloat(debtAmount) * monthlyRate
+      
+      if (parseFloat(monthlyPayment) <= minPayment) {
+        newErrors.monthlyPayment = `القسط يجب أن يكون أكبر من ${Math.ceil(minPayment)} ريال`
       }
     }
 
-    while (currentBalance > 0.01 && months < 600) {
-      const interestCharge = currentBalance * monthlyRate
-      const principalPayment = payment - interestCharge
-      
-      totalInterest += interestCharge
-      currentBalance -= principalPayment
-      months++
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
-      if (currentBalance < 0) currentBalance = 0
+  const generatePersonalMessage = (months: number, totalInterest: number, debtAmount: number) => {
+    const principal = debtAmount;
+    const interestPercentage = (totalInterest / principal) * 100
+
+    if (months <= 6) {
+      return {
+        title: "ممتاز! خطة سداد سريعة",
+        message: `بالخطة الحالية، ستتخلص من دينك في ${formatDuration(months)} فقط. هذا إنجاز رائع يظهر التزامك القوي بتحسين وضعك المالي.`,
+        tone: "positive",
+        advice: "استمر على هذا المسار الممتاز، وفكر في توجيه القسط الذي ستوفره لبناء صندوق الطوارئ."
+      }
+    } else if (months <= 12) {
+      return {
+        title: "خطة سداد جيدة ومعقولة",
+        message: `ستحرر نفسك من هذا الدين خلال ${formatDuration(months)}. فترة معقولة جداً تتيح لك التوازن بين السداد والالتزامات الأخرى.`,
+        tone: "encouraging",
+        advice: "إذا تمكنت من زيادة القسط حتى بمبلغ صغير، ستوفر الكثير من الفوائد وتقصر المدة."
+      }
+    } else if (months <= 24) {
+      return {
+        title: "خطة سداد متوسطة المدى",
+        message: `رحلة السداد ستستغرق ${formatDuration(months)}. هذا وقت كافٍ لترتيب أمورك المالية دون ضغط كبير على ميزانيتك.`,
+        tone: "supportive",
+        advice: "راجع ميزانيتك لترى إن كان بإمكانك توفير مبلغ إضافي شهرياً، حتى 100 ريال ستحدث فرقاً كبيراً."
+      }
+    } else if (months <= 60) {
+      return {
+        title: "خطة سداد طويلة المدى - يمكن تحسينها",
+        message: `المدة المتوقعة هي ${formatDuration(months)}. هذا وقت طويل، لكن الأهم أنك بدأت رحلة التخلص من الديون.`,
+        tone: "motivational",
+        advice: "فكر في طرق لزيادة دخلك أو تقليل المصاريف لتسريع عملية السداد. كل ريال إضافي مهم."
+      }
+    } else {
+      return {
+        title: "تحتاج لمراجعة الخطة",
+        message: `بالمعدل الحالي، السداد سيستغرق أكثر من 5 سنوات. هذا يتطلب إعادة نظر في الاستراتيجية.`,
+        tone: "advisory",
+        advice: "أنصحك بالتفكير في زيادة القسط الشهري أو البحث عن خيارات إعادة تمويل بفائدة أقل."
+      }
+    }
+  }
+
+  const calculatePayoff = () => {
+    if (!validateInputs()) return
+
+    const principal = parseFloat(debtAmount)
+    const payment = parseFloat(monthlyPayment)
+    const annualRate = parseFloat(interestRate) / 100
+    const monthlyRate = annualRate / 12
+
+    let balance = principal
+    let totalInterest = 0
+    let months = 0
+
+    if (monthlyRate === 0) {
+      months = Math.ceil(balance / payment)
+      totalInterest = 0
+    } else {
+      while (balance > 0.01 && months < 600) {
+        const interestPayment = balance * monthlyRate
+        const principalPayment = payment - interestPayment
+        
+        totalInterest += interestPayment
+        balance -= principalPayment
+        months++
+
+        if (balance < 0) balance = 0
+      }
     }
 
-    return {
-      debt: { id: '', name: '', balance, minPayment: payment, interestRate: rate },
+    const totalPayment = principal + totalInterest
+    const personalMessage = generatePersonalMessage(months, totalInterest, principal)
+
+    setResult({
       monthsToPayoff: months,
       totalInterest,
-      totalPayment: balance + totalInterest
-    }
-  }
-
-  const calculateStrategy = (method: 'snowball' | 'avalanche'): PayoffStrategy => {
-    const validDebts = debts.filter(debt => debt.balance > 0 && debt.minPayment > 0)
-    const totalMinPayments = validDebts.reduce((sum, debt) => sum + debt.minPayment, 0)
-    const totalExtraPayment = extraPayment
-
-    // Sort debts based on strategy
-    const sortedDebts = [...validDebts].sort((a, b) => {
-      if (method === 'snowball') {
-        return a.balance - b.balance // Smallest balance first
-      } else {
-        return b.interestRate - a.interestRate // Highest interest first
-      }
+      totalPayment,
+      personalMessage
     })
-
-    const results: PayoffResult[] = []
-    let remainingDebts = [...sortedDebts]
-    let currentExtraPayment = totalExtraPayment
-    let totalMonths = 0
-
-    while (remainingDebts.length > 0) {
-      const targetDebt = remainingDebts[0]
-      const paymentForThisDebt = targetDebt.minPayment + currentExtraPayment
-
-      const result = calculatePayoffTime(
-        targetDebt.balance,
-        paymentForThisDebt,
-        targetDebt.interestRate
-      )
-
-      result.debt = targetDebt
-      results.push(result)
-
-      totalMonths = Math.max(totalMonths, result.monthsToPayoff)
-      currentExtraPayment += targetDebt.minPayment // Add freed up payment
-      remainingDebts.shift()
-    }
-
-    const totalInterest = results.reduce((sum, result) => sum + result.totalInterest, 0)
-    
-    return {
-      method,
-      results,
-      totalTime: totalMonths,
-      totalInterest,
-      savings: 0
-    }
-  }
-
-  const calculateBothStrategies = () => {
-    const snowball = calculateStrategy('snowball')
-    const avalanche = calculateStrategy('avalanche')
-    
-    // Calculate savings
-    if (snowball.totalInterest > avalanche.totalInterest) {
-      avalanche.savings = snowball.totalInterest - avalanche.totalInterest
-    } else {
-      snowball.savings = avalanche.totalInterest - snowball.totalInterest
-    }
-
-    setResults({ snowball, avalanche })
   }
 
   const formatCurrency = (amount: number) => {
@@ -170,361 +144,268 @@ export default function DebtCalculatorPage() {
     }).format(amount)
   }
 
-  const formatMonths = (months: number) => {
+  const formatDuration = (months: number) => {
     if (months >= 12) {
       const years = Math.floor(months / 12)
       const remainingMonths = months % 12
-      return remainingMonths > 0 
-        ? `${years} سنة و ${remainingMonths} شهر`
-        : `${years} سنة`
+      if (remainingMonths === 0) {
+        return `${years} ${years === 1 ? 'سنة' : 'سنوات'}`
+      }
+      return `${years} ${years === 1 ? 'سنة' : 'سنوات'} و ${remainingMonths} ${remainingMonths === 1 ? 'شهر' : 'شهور'}`
     }
-    return `${months} شهر`
+    return `${months} ${months === 1 ? 'شهر' : 'شهور'}`
   }
 
-  const totalDebt = debts.reduce((sum, debt) => sum + debt.balance, 0)
-  const totalMinPayment = debts.reduce((sum, debt) => sum + debt.minPayment, 0)
+  const resetCalculator = () => {
+    setDebtAmount('')
+    setMonthlyPayment('')
+    setInterestRate('')
+    setResult(null)
+    setErrors({})
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-teal-50 p-4">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-6">
+          <nav className="flex items-center space-x-2 text-sm text-gray-600 mb-4">
+            <Link href="/" className="hover:text-blue-600 flex items-center gap-1">
+              <Home className="h-4 w-4" />
+              الرئيسية
+            </Link>
+            <ArrowRight className="h-4 w-4" />
+            <Link href="/tools" className="hover:text-blue-600">
+              الأدوات المالية
+            </Link>
+            <ArrowRight className="h-4 w-4" />
+            <span className="text-gray-800 font-medium">حاسبة الديون</span>
+          </nav>
+          
+          <Link href="/tools">
+            <Button variant="outline" className="flex items-center gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              العودة للأدوات
+            </Button>
+          </Link>
+        </div>
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <div className="p-3 bg-gradient-to-r from-blue-600 to-teal-600 rounded-full text-white">
               <Calculator className="h-8 w-8" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">حاسبة الديون المتقدمة</h1>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">حاسبة الديون</h1>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            احسب أفضل استراتيجية لسداد ديونك ووفر آلاف الريالات من الفوائد
+            احسب المدة اللازمة لسداد دينك وإجمالي الفوائد المدفوعة
           </p>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* Input Section */}
-          <div className="space-y-6">
-            {/* Debt Overview Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
-                  ملخص الديون
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4 text-center">
-                  <div className="p-4 bg-red-50 rounded-lg">
-                    <div className="text-sm text-gray-600">إجمالي الديون</div>
-                    <div className="text-xl font-bold text-red-600">
-                      {formatCurrency(totalDebt)}
-                    </div>
-                  </div>
-                  <div className="p-4 bg-blue-50 rounded-lg">
-                    <div className="text-sm text-gray-600">الحد الأدنى للسداد</div>
-                    <div className="text-xl font-bold text-blue-600">
-                      {formatCurrency(totalMinPayment)}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Debts List */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>قائمة الديون</span>
-                  <Button onClick={addDebt} size="sm" className="flex items-center gap-1">
-                    <Plus className="h-4 w-4" />
-                    إضافة دين
-                  </Button>
-                </CardTitle>
-                <CardDescription>
-                  أدخل تفاصيل كل دين لحساب أفضل استراتيجية سداد
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {debts.map((debt, index) => (
-                  <div key={debt.id} className="p-4 border rounded-lg space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-gray-700">دين #{index + 1}</span>
-                      {debts.length > 1 && (
-                        <Button
-                          onClick={() => removeDebt(debt.id)}
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                    
-                    <div className="grid md:grid-cols-2 gap-3">
-                      <div>
-                        <Label htmlFor={`name-${debt.id}`} className="text-sm">اسم الدين</Label>
-                        <Input
-                          id={`name-${debt.id}`}
-                          value={debt.name}
-                          onChange={(e) => updateDebt(debt.id, 'name', e.target.value)}
-                          placeholder="مثال: بطاقة ائتمان"
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor={`balance-${debt.id}`} className="text-sm">الرصيد المتبقي</Label>
-                        <Input
-                          id={`balance-${debt.id}`}
-                          type="number"
-                          value={debt.balance || ''}
-                          onChange={(e) => updateDebt(debt.id, 'balance', parseFloat(e.target.value) || 0)}
-                          placeholder="مثال: 15000"
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor={`payment-${debt.id}`} className="text-sm">الحد الأدنى للسداد</Label>
-                        <Input
-                          id={`payment-${debt.id}`}
-                          type="number"
-                          value={debt.minPayment || ''}
-                          onChange={(e) => updateDebt(debt.id, 'minPayment', parseFloat(e.target.value) || 0)}
-                          placeholder="مثال: 450"
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor={`rate-${debt.id}`} className="text-sm">معدل الفائدة السنوي (%)</Label>
-                        <Input
-                          id={`rate-${debt.id}`}
-                          type="number"
-                          step="0.1"
-                          value={debt.interestRate || ''}
-                          onChange={(e) => updateDebt(debt.id, 'interestRate', parseFloat(e.target.value) || 0)}
-                          placeholder="مثال: 18"
-                          className="mt-1"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* Extra Payment */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5" />
-                  مبلغ إضافي للسداد
-                </CardTitle>
-                <CardDescription>
-                  كم تستطيع دفع إضافة على الحد الأدنى شهرياً؟
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+          <Card className="h-fit">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5" />
+                معلومات الدين
+              </CardTitle>
+              <CardDescription>
+                أدخل تفاصيل دينك للحصول على تحليل دقيق
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="debtAmount" className="text-base font-medium">
+                  مبلغ الدين (بالريال)
+                </Label>
                 <Input
+                  id="debtAmount"
                   type="number"
-                  value={extraPayment || ''}
-                  onChange={(e) => setExtraPayment(parseFloat(e.target.value) || 0)}
-                  placeholder="مثال: 500"
-                  className="text-lg p-4 h-12"
+                  placeholder="مثال: 50000"
+                  value={debtAmount}
+                  onChange={(e) => setDebtAmount(e.target.value)}
+                  className={`text-lg p-4 h-14 ${errors.debtAmount ? 'border-red-500' : ''}`}
                 />
-              </CardContent>
-            </Card>
+                {errors.debtAmount && (
+                  <p className="text-red-500 text-sm flex items-center gap-1">
+                    <AlertCircle className="h-4 w-4" />
+                    {errors.debtAmount}
+                  </p>
+                )}
+              </div>
 
-            {/* Calculate Button */}
-            <Button 
-              onClick={calculateBothStrategies}
-              className="w-full bg-gradient-to-r from-blue-600 to-teal-600 hover:from-blue-700 hover:to-teal-700 h-12 text-lg"
-              disabled={debts.some(debt => debt.balance <= 0 || debt.minPayment <= 0)}
-            >
-              احسب استراتيجية السداد الأمثل
-            </Button>
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="monthlyPayment" className="text-base font-medium">
+                  القسط الشهري (بالريال)
+                </Label>
+                <Input
+                  id="monthlyPayment"
+                  type="number"
+                  placeholder="مثال: 2000"
+                  value={monthlyPayment}
+                  onChange={(e) => setMonthlyPayment(e.target.value)}
+                  className={`text-lg p-4 h-14 ${errors.monthlyPayment ? 'border-red-500' : ''}`}
+                />
+                {errors.monthlyPayment && (
+                  <p className="text-red-500 text-sm flex items-center gap-1">
+                    <AlertCircle className="h-4 w-4" />
+                    {errors.monthlyPayment}
+                  </p>
+                )}
+              </div>
 
-          {/* Results Section */}
+              <div className="space-y-2">
+                <Label htmlFor="interestRate" className="text-base font-medium">
+                  معدل الفائدة السنوي (%)
+                </Label>
+                <Input
+                  id="interestRate"
+                  type="number"
+                  step="0.1"
+                  placeholder="مثال: 15"
+                  value={interestRate}
+                  onChange={(e) => setInterestRate(e.target.value)}
+                  className={`text-lg p-4 h-14 ${errors.interestRate ? 'border-red-500' : ''}`}
+                />
+                {errors.interestRate && (
+                  <p className="text-red-500 text-sm flex items-center gap-1">
+                    <AlertCircle className="h-4 w-4" />
+                    {errors.interestRate}
+                  </p>
+                )}
+                <p className="text-sm text-gray-500">
+                  إذا لم يكن هناك فائدة، أدخل 0
+                </p>
+              </div>
+
+              <Button 
+                onClick={calculatePayoff}
+                className="w-full bg-gradient-to-r from-blue-600 to-teal-600 hover:from-blue-700 hover:to-teal-700 h-12 text-lg font-medium"
+              >
+                احسب فترة السداد
+              </Button>
+
+              {result && (
+                <Button 
+                  onClick={resetCalculator}
+                  variant="outline"
+                  className="w-full"
+                >
+                  حساب جديد
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+
           <div className="space-y-6">
-            {results.snowball && results.avalanche ? (
-              <Tabs defaultValue="comparison" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="comparison">مقارنة</TabsTrigger>
-                  <TabsTrigger value="snowball">كرة الثلج</TabsTrigger>
-                  <TabsTrigger value="avalanche">الانهيار الجليدي</TabsTrigger>
-                </TabsList>
-
-                {/* Comparison Tab */}
-                <TabsContent value="comparison" className="space-y-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>مقارنة الاستراتيجيات</CardTitle>
-                      <CardDescription>
-                        اختر الاستراتيجية التي تناسب أهدافك المالية
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {/* Snowball Strategy */}
-                      <div className="p-4 border rounded-lg">
-                        <div className="flex items-center justify-between mb-3">
-                          <h3 className="font-semibold text-gray-800">استراتيجية كرة الثلج</h3>
-                          <Badge variant="secondary">الأسرع نفسياً</Badge>
+            {result ? (
+              <>
+                <Card className="border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-teal-50">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-blue-800 text-xl">
+                      <CheckCircle2 className="h-6 w-6" />
+                      {result.personalMessage?.title}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="bg-white/80 backdrop-blur p-6 rounded-lg">
+                      <p className="text-gray-700 text-lg leading-relaxed mb-4">
+                        {result.personalMessage?.message}
+                      </p>
+                      <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg">
+                        <div className="flex justify-center items-center">
+                          <Calendar className="h-8 w-8 text-blue-600" />
                         </div>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <span className="text-gray-600">وقت السداد:</span>
-                            <span className="font-medium ml-2">{formatMonths(results.snowball.totalTime)}</span>
+                        <div>
+                          <div className="text-2xl font-bold text-blue-600">
+                            {formatDuration(result.monthsToPayoff)}
                           </div>
-                          <div>
-                            <span className="text-gray-600">إجمالي الفوائد:</span>
-                            <span className="font-medium ml-2">{formatCurrency(results.snowball.totalInterest)}</span>
-                          </div>
+                          <div className="text-gray-600 text-sm">فترة التحرر من الدين</div>
                         </div>
-                        {results.snowball.savings > 0 && (
-                          <div className="mt-2 p-2 bg-green-50 rounded text-sm">
-                            <span className="text-green-600 font-medium">
-                              توفير: {formatCurrency(results.snowball.savings)}
-                            </span>
-                          </div>
-                        )}
                       </div>
+                    </div>
 
-                      {/* Avalanche Strategy */}
-                      <div className="p-4 border rounded-lg">
-                        <div className="flex items-center justify-between mb-3">
-                          <h3 className="font-semibold text-gray-800">استراتيجية الانهيار الجليدي</h3>
-                          <Badge variant="secondary">الأوفر مالياً</Badge>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-white p-4 rounded-lg shadow-sm text-center">
+                        <div className="text-lg font-bold text-gray-800">
+                          {formatCurrency(result.totalInterest)}
                         </div>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <span className="text-gray-600">وقت السداد:</span>
-                            <span className="font-medium ml-2">{formatMonths(results.avalanche.totalTime)}</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-600">إجمالي الفوائد:</span>
-                            <span className="font-medium ml-2">{formatCurrency(results.avalanche.totalInterest)}</span>
-                          </div>
+                        <div className="text-sm text-gray-600">إجمالي الفوائد</div>
+                      </div>
+                      
+                      <div className="bg-white p-4 rounded-lg shadow-sm text-center">
+                        <div className="text-lg font-bold text-gray-800">
+                          {formatCurrency(result.totalPayment)}
                         </div>
-                        {results.avalanche.savings > 0 && (
-                          <div className="mt-2 p-2 bg-green-50 rounded text-sm">
-                            <span className="text-green-600 font-medium">
-                              توفير: {formatCurrency(results.avalanche.savings)}
-                            </span>
-                          </div>
-                        )}
+                        <div className="text-sm text-gray-600">المبلغ الكامل</div>
                       </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-                      {/* Recommendation */}
-                      <div className="p-4 bg-blue-50 rounded-lg">
-                        <h4 className="font-medium text-blue-800 mb-2">التوصية:</h4>
-                        <p className="text-blue-700 text-sm">
-                          {results.avalanche.savings > results.snowball.savings
-                            ? "استراتيجية الانهيار الجليدي توفر أكثر على المدى الطويل"
-                            : "استراتيجية كرة الثلج قد تكون أفضل للدافعية النفسية"
-                          }
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                {/* Snowball Details */}
-                <TabsContent value="snowball">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>تفاصيل استراتيجية كرة الثلج</CardTitle>
-                      <CardDescription>
-                        ادفع الديون الأصغر أولاً لبناء الزخم النفسي
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        {results.snowball.results.map((result, index) => (
-                          <div key={result.debt.id} className="p-4 border rounded-lg">
-                            <div className="flex items-center justify-between mb-2">
-                              <h4 className="font-medium">{result.debt.name || `دين #${index + 1}`}</h4>
-                              <Badge>ترتيب #{index + 1}</Badge>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                              <div>
-                                <span className="text-gray-600">الرصيد:</span>
-                                <span className="font-medium ml-2">{formatCurrency(result.debt.balance)}</span>
-                              </div>
-                              <div>
-                                <span className="text-gray-600">وقت السداد:</span>
-                                <span className="font-medium ml-2">{formatMonths(result.monthsToPayoff)}</span>
-                              </div>
-                              <div>
-                                <span className="text-gray-600">الفوائد:</span>
-                                <span className="font-medium ml-2">{formatCurrency(result.totalInterest)}</span>
-                              </div>
-                              <div>
-                                <span className="text-gray-600">إجمالي السداد:</span>
-                                <span className="font-medium ml-2">{formatCurrency(result.totalPayment)}</span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                {/* Avalanche Details */}
-                <TabsContent value="avalanche">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>تفاصيل استراتيجية الانهيار الجليدي</CardTitle>
-                      <CardDescription>
-                        ادفع الديون ذات الفائدة الأعلى أولاً لتوفير أكبر
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        {results.avalanche.results.map((result, index) => (
-                          <div key={result.debt.id} className="p-4 border rounded-lg">
-                            <div className="flex items-center justify-between mb-2">
-                              <h4 className="font-medium">{result.debt.name || `دين #${index + 1}`}</h4>
-                              <Badge>ترتيب #{index + 1}</Badge>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                              <div>
-                                <span className="text-gray-600">الرصيد:</span>
-                                <span className="font-medium ml-2">{formatCurrency(result.debt.balance)}</span>
-                              </div>
-                              <div>
-                                <span className="text-gray-600">وقت السداد:</span>
-                                <span className="font-medium ml-2">{formatMonths(result.monthsToPayoff)}</span>
-                              </div>
-                              <div>
-                                <span className="text-gray-600">الفوائد:</span>
-                                <span className="font-medium ml-2">{formatCurrency(result.totalInterest)}</span>
-                              </div>
-                              <div>
-                                <span className="text-gray-600">إجمالي السداد:</span>
-                                <span className="font-medium ml-2">{formatCurrency(result.totalPayment)}</span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </Tabs>
+                <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+                  <CardHeader>
+                    <CardTitle className="text-green-800 text-lg flex items-center gap-2">
+                      <TrendingDown className="h-5 w-5" />
+                      نصيحة خاصة لوضعك
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-green-700 mb-4 leading-relaxed">
+                      {result.personalMessage?.advice}
+                    </p>
+                    
+                    <div className="bg-white/50 p-4 rounded-lg">
+                      <h4 className="font-medium text-green-800 mb-2">خطوات عملية:</h4>
+                      <ul className="space-y-2 text-green-700">
+                        <li className="flex items-start gap-2">
+                          <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                          <span className="text-sm">راجع مصروفاتك واحذف غير الضروري</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                          <span className="text-sm">اجعل سداد الدين الأولوية القصوى</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                          <span className="text-sm">احتفل بكل إنجاز في رحلة السداد</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
             ) : (
-              <Card>
+              <Card className="h-fit">
                 <CardContent className="p-8 text-center">
-                  <Calculator className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                  <TrendingDown className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-600 mb-2">جاهز للحساب</h3>
                   <p className="text-gray-500">
-                    أدخل تفاصيل ديونك واضغط على "احسب استراتيجية السداد الأمثل" لرؤية النتائج
+                    أدخل معلومات دينك في النموذج المجاور للحصول على تحليل مفصل لخطة السداد
                   </p>
                 </CardContent>
               </Card>
             )}
           </div>
         </div>
+
+        <Card className="mt-12 bg-gradient-to-r from-blue-600 to-teal-600 text-white">
+          <CardContent className="p-8 text-center">
+            <h2 className="text-2xl font-bold mb-4">
+              هل تريد استراتيجيات متقدمة لسداد الديون؟
+            </h2>
+            <p className="text-blue-100 mb-6 max-w-2xl mx-auto">
+              اكتشف طرق كرة الثلج والانهيار الجليدي لسداد عدة ديون بكفاءة أكبر
+            </p>
+            <Button 
+              size="lg"
+              className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-3"
+            >
+              استكشف الأدوات المتقدمة قريباً
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
 }
+
+    
