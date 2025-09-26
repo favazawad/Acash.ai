@@ -4,11 +4,11 @@ import { Button } from '@/components/ui/button';
 
 export function Header() {
   const navLinks = [
-    { href: '/', label: 'Home' },
-    { href: '#features', label: 'Features' },
+    { href: '/', label: 'الرئيسية' },
+    { href: '#features', label: 'الميزات' },
     { href: '/tools', label: 'الأدوات' },
-    { href: '#about', label: 'About' },
-    { href: '#contact', label: 'Contact' },
+    { href: '#about', label: 'من نحن' },
+    { href: '#contact', label: 'تواصل معنا' },
   ];
 
   return (
